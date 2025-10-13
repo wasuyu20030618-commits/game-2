@@ -6,128 +6,220 @@
     <title>ポーカー（簡易版） - 心理戦カジノモード</title>
     <style>
         /* ======================== */
-        /* カジノ風CSSはブラックジャックから流用・調整 */
+        /* ゲーム画面のCSS - スクロール対策とコンパクト化 */
         /* ======================== */
         body {
             font-family: 'Arial', sans-serif;
             text-align: center;
             background-color: #0d230d;
             background-image: 
-                url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" width="100%" height="20%"><path d="M10 20 H90 V10 Q50 0, 10 10 Z" fill="#8B0000"/><path d="M15 15 H85 V10 C80 5, 20 5, 15 10 Z" fill="#B22222"/></svg>') bottom center no-repeat,
-                radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 60%),
-                radial-gradient(ellipse at bottom left, #ccac00 0%, transparent 40%),
-                radial-gradient(ellipse at top right, #ff9800 0%, transparent 40%),
-                repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 5px);
-            background-size: auto 100px, cover, cover, cover, cover;
+                url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" width="100%" height="20%"><path d="M10 20 H90 V10 Q50 0, 10 10 Z" fill="#8B0000"/><path d="M15 15 H85 V10 C80 5, 20 5, 15 10 Z" fill="#B22222"/></svg>') bottom center no-repeat;
+            background-size: auto 100px, cover;
             background-attachment: fixed;
             color: #fff;
-            padding: 20px;
-        }
-
-        .chandelier-light {
-            position: fixed; top: 0; left: 0; width: 100%; height: 150px; pointer-events: none; overflow: hidden;
-            background: radial-gradient(circle at 50% 10%, rgba(255, 255, 100, 0.4) 0%, rgba(255, 255, 150, 0) 60%);
-            animation: twinkle 4s infinite alternate; z-index: 1; 
-        }
-
-        @keyframes twinkle {
-            0% { opacity: 0.8; transform: scale(1, 1); }
-            50% { opacity: 1; transform: scale(1.05, 1.1); }
-            100% { opacity: 0.9; transform: scale(1, 1); }
+            padding: 10px; /* パディングを減らす */
+            margin: 0; /* マージンを0にする */
+            overflow-y: hidden; /* 縦スクロールを基本的に禁止 */
         }
 
         .container {
-            max-width: 900px; margin: 0 auto; background-color: rgba(0, 0, 0, 0.75); padding: 30px;
-            border-radius: 15px; box-shadow: 0 8px 30px rgba(255, 215, 0, 0.3); 
-            border: 5px solid #ccac00; position: relative; z-index: 10;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: rgba(0, 0, 0, 0.75);
+            padding: 15px; /* パディングを減らす */
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.3); 
+            border: 5px solid #ccac00;
         }
-        
+
+        /* ヘッダーと情報バー */
+        h1 { margin-top: 5px; font-size: 1.8em; }
         #infoBar {
-            display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; 
-            background-color: #0b4920; border-radius: 8px; margin-bottom: 20px; font-size: 1.1em; font-weight: bold;
-        }
-        .chip-icon { color: gold; margin-right: 5px; font-size: 1.2em; }
-        .pot-icon { color: #ff4500; margin-right: 5px; font-size: 1.2em; }
-
-        /* ベット/難易度選択エリア */
-        #preGameControls {
-            margin-bottom: 20px; padding: 15px; background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 25px;
+            display: flex; justify-content: space-around; align-items: center; 
+            padding: 8px 10px; background-color: #0b4920; border-radius: 8px;
+            margin-bottom: 10px; font-size: 1em; font-weight: bold;
         }
         
-        select { padding: 10px; border-radius: 5px; font-size: 1.1em; background-color: #fff; color: #333; border: 1px solid #ccc; }
-        
-        /* ベット額入力ボックス */
-        input[type="number"] {
-            padding: 10px 15px; border-radius: 5px; font-size: 1.5em; width: 80px; height: 50px; 
-            background-color: #fff; color: #333; border: 3px solid #ccac00; text-align: center; font-weight: bold;
+        /* カードエリアのレイアウトを縦から横へ */
+        #gameArea {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        /* カード表示エリア */
-        .hand { margin-bottom: 10px; padding: 15px; border-radius: 8px; }
-        #communityArea { border: 2px dashed #993399; padding: 15px; margin: 20px 0; }
+        /* ディーラー、コミュニティ、プレイヤーの配置を上下で区切る */
+        #dealerHand, #playerHand {
+            width: 100%;
+            padding: 5px;
+        }
+
+        #communityArea {
+            width: 90%;
+            margin: 10px 0;
+            padding: 10px;
+            border: 2px dashed #993399;
+            border-radius: 8px;
+        }
+        #communityArea h3 { margin-top: 0; margin-bottom: 5px; font-size: 1em; }
         
-        .cards { display: flex; justify-content: center; margin: 10px 0; min-height: 100px; flex-wrap: wrap; }
-        
+        .hand h2 { font-size: 1.2em; margin: 0 0 5px 0; }
+        .hand-status { font-size: 0.9em; }
+
+        .cards {
+            display: flex; justify-content: center; margin: 5px 0; min-height: 80px; flex-wrap: wrap;
+        }
+
         .card { 
-            background-color: #fff; color: #000; border: 1px solid #000; border-radius: 5px;
-            width: 70px; height: 90px; display: flex; flex-direction: column; justify-content: space-between;
-            align-items: center; margin: 0 5px; padding: 5px; font-size: 1.2em;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); font-weight: bold;
+            background-color: #fff; color: #000; border: 1px solid #000; border-radius: 4px;
+            width: 55px; height: 75px; /* カードサイズを小さく */
+            display: flex; flex-direction: column; justify-content: space-between;
+            align-items: center; margin: 0 3px; padding: 4px; font-size: 1em;
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); font-weight: bold;
         }
-        .card.hidden { background-color: #8b0000; color: #fff; font-size: 1em; display: flex; justify-content: center; align-items: center; font-style: italic; }
+        .card.hidden { background-color: #8b0000; color: #fff; font-size: 0.8em; display: flex; justify-content: center; align-items: center; font-style: italic; }
+        .card-suit { font-size: 1.2em !important; }
         
-        /* ポーカーアクションボタン */
-        button { padding: 10px 20px; font-size: 1em; margin: 5px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; font-weight: bold; }
-        #dealButton { background-color: #2196f3; color: #fff; }
-        #foldButton { background-color: #8b0000; color: #fff; } /* 降りる */
-        #callButton { background-color: #ff9800; color: #fff; } /* 勝負に乗る */
-        #raiseButton { background-color: #4caf50; color: #fff; } /* 賭け増し */
-        #checkButton { background-color: #607d8b; color: #fff; } /* チェック */
+        /* コントロールエリアとアクションボタン */
+        #preGameControls, #buttons {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        #preGameControls input[type="number"] {
+            width: 60px; height: 35px; font-size: 1.2em; padding: 5px;
+        }
 
-        /* メッセージエリアとディーラーAA */
-        #message { font-size: 1.5em; margin-top: 20px; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; }
-        .dealer-aa { font-size: 2.0em; margin-bottom: 5px; display: block; }
+        #actionButtons button {
+             padding: 8px 15px; font-size: 0.9em; margin: 0 2px;
+        }
+        
+        /* メッセージエリアを最小化 */
+        #message { 
+            font-size: 1.1em; 
+            margin-top: 5px; 
+            font-weight: bold; 
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 5px;
+            border-radius: 5px;
+            min-height: 30px; /* 最小高さを確保 */
+        }
+        .dealer-aa { 
+            font-size: 1.5em; /* AAも小さく */
+            display: inline-block; 
+            margin-right: 5px;
+        }
 
-        /* ポーカー専用の追加表示 */
-        #currentBetStatus { margin: 10px 0; font-weight: bold; }
-        .hand-status { color: #ccac00; font-weight: bold; margin-top: 5px; }
+        /* モーダルCSS (ルール) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); /* 濃い背景 */
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+        }
+
+        .modal-content {
+            background-color: #f5f5dc; 
+            color: #333;
+            width: 90%; max-width: 600px;
+            padding: 30px 20px 15px 20px;
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.9);
+            border: 8px solid #ccac00; 
+            background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px; 
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.3); 
+        }
+        .close-button { position: absolute; top: 5px; right: 15px; background: none; border: none; color: #333; font-size: 2em; cursor: pointer; z-index: 101; }
+        .rule-title { color: #8b0000; border-bottom: 2px solid #ccac00; padding-bottom: 5px; margin-bottom: 15px; }
+        .rule-list { text-align: left; list-style-type: disc; margin-left: 20px; font-size: 0.95em; }
+        .rule-list li { margin-bottom: 8px; }
+        .hand-rank-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em;}
+        .hand-rank-table th, .hand-rank-table td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+        .hand-rank-table th { background-color: #ccac00; color: #333; }
+
     </style>
 </head>
 <body>
 
-<div class="chandelier-light"></div>
+<div id="ruleModal" class="modal-overlay">
+    <div class="modal-content">
+        <button id="closeModal" class="close-button">&times;</button>
+        <h2 class="rule-title">♦ ポーカー（簡易版）のルール ♦</h2>
+        
+        <p style="text-align: left;">
+            ポーカーは、手札2枚と場札5枚（順次公開）の中から**最も強い5枚**の組み合わせ（役）を作り、ディーラーと勝負します。
+            勝負の途中で、相手より強い役ができそうか予測し、**チップを賭け合う**のが醍醐味です。
+        </p>
+
+        <h3 style="color: #8b0000; margin-top: 10px; text-align: left;">1. ゲームの流れとアクション</h3>
+        <ul class="rule-list">
+            <li>**アンティ**: ゲーム開始前に参加料を賭けます。</li>
+            <li>**カード公開/ベット**: フロップ(3枚)→ターン(1枚)→リバー(1枚)とカードが開くたびに、チップを賭けるチャンスがあります。</li>
+            <li>**[アクション]**
+                <ul>
+                    <li>**チェック**: チップを賭けずに順番を回す。（誰も賭けていない場合）</li>
+                    <li>**コール**: 相手が賭けた額と同額を出す。（勝負に乗る）</li>
+                    <li>**レイズ**: 相手が賭けた額より多く出す。（賭け金を釣り上げる）</li>
+                    <li>**フォールド**: 手札を捨てて勝負から降りる。（賭けたチップは没収）</li>
+                </ul>
+            </li>
+            <li>**ショーダウン**: 最終的に役が強い方がポット（総賭け金）を総取りします。</li>
+        </ul>
+
+        <h3 style="color: #8b0000; margin-top: 10px; text-align: left;">2. 役の強さ（上位のみ）</h3>
+        <table class="hand-rank-table">
+            <thead>
+                <tr><th>ランク</th><th>役の名称</th><th>説明</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>最強</td><td>ストレートフラッシュ</td><td>連番で同じマークの5枚</td></tr>
+                <tr><td>高</td><td>フォーカード</td><td>同じ数字が4枚</td></tr>
+                <tr><td>中</td><td>フルハウス</td><td>3枚の同じ数字＋2枚の同じ数字</td></tr>
+                <tr><td>並</td><td>フラッシュ</td><td>同じマークの5枚</td></tr>
+                <tr><td>低</td><td>ストレート</td><td>連番の5枚</td></tr>
+            </tbody>
+        </table>
+        
+        <p style="color:#8b0000; font-weight: bold; margin-top: 15px;">準備ができたら、右上の [✕] ボタンで閉じてゲームを始めましょう。</p>
+    </div>
+</div>
 
 <div class="container">
-    <h1>POKER (Texas Hold'em Style)</h1>
+    <h1>POKER (簡易版)</h1>
     
     <div id="infoBar">
         <div class="info-item">
-            <span class="chip-icon">💰</span> あなたのチップ: <span id="chipsAmount">1000</span>
+            <span class="chip-icon">💰</span> チップ: <span id="chipsAmount">1000</span>
         </div>
         <div class="info-item">
             <span class="pot-icon">🔥</span> ポット総額: <span id="potAmount">0</span>
         </div>
     </div>
 
-    <div id="dealerHand" class="hand">
-        <h2>ディーラーの手札: <span id="dealerHandStatus" class="hand-status">?</span></h2>
-        <div id="dealerCards" class="cards"></div>
-    </div>
-    
-    <div id="communityArea">
-        <h3>場札 (コミュニティカード)</h3>
-        <div id="communityCards" class="cards"></div>
+    <div id="gameArea">
+        <div id="dealerHand" class="hand">
+            <h2>ディーラー: <span id="dealerHandStatus" class="hand-status">?</span></h2>
+            <div id="dealerCards" class="cards"></div>
+        </div>
+        
+        <div id="communityArea">
+            <h3>場札</h3>
+            <div id="communityCards" class="cards"></div>
+        </div>
+
+        <div id="playerHand" class="hand">
+            <h2>あなた: <span id="playerHandStatus" class="hand-status">?</span></h2>
+            <div id="playerCards" class="cards"></div>
+        </div>
     </div>
 
-    <div id="playerHand" class="hand">
-        <h2>あなたの手札: <span id="playerHandStatus" class="hand-status">?</span></h2>
-        <div id="playerCards" class="cards"></div>
+    <div id="currentBetStatus">
+        ベット額：ディーラー <span id="dealerCurrentBet">0</span> / あなた <span id="playerCurrentBet">0</span>
     </div>
 
     <div id="preGameControls">
         <div>
-            <label for="anteAmount">アンティ (参加料):</label>
+            <label for="anteAmount">アンティ:</label>
             <input type="number" id="anteAmount" value="10" min="10" step="10">
         </div>
         <div>
@@ -136,16 +228,12 @@
         </div>
     </div>
 
-    <div id="currentBetStatus">
-        現在のベット状況：ディーラー <span id="dealerCurrentBet">0</span> / あなた <span id="playerCurrentBet">0</span>
-    </div>
-
     <div id="buttons">
         <button id="dealButton">ゲーム開始 (アンティを賭ける)</button>
         <div id="actionButtons" style="display: none;">
             <button id="foldButton" disabled>フォールド</button>
             <button id="checkCallButton" disabled>チェック / コール</button>
-            <button id="raiseButton" disabled>レイズ (賭け増し)</button>
+            <button id="raiseButton" disabled>レイズ</button>
         </div>
     </div>
     
@@ -153,7 +241,7 @@
         <div class="dealer-aa">(*^.^*)</div> アンティを決めて、ゲーム開始よ！
     </div>
     
-    <div id="postGameButtons" style="display: none; margin-top: 20px;">
+    <div id="postGameButtons" style="display: none; margin-top: 10px;">
         <button id="nextGameButton">次の勝負へ</button>
     </div>
 </div>
@@ -189,6 +277,8 @@
     const dealerHandStatusEl = document.getElementById('dealerHandStatus');
     const playerHandStatusEl = document.getElementById('playerHandStatus');
     const postGameButtons = document.getElementById('postGameButtons');
+    const ruleModal = document.getElementById('ruleModal');
+    const closeModalButton = document.getElementById('closeModal');
     
     // ゲーム変数
     let chips = 1000;
@@ -201,18 +291,16 @@
     let playerBet = 0;
     let currentBettingRound = 0; // 0: Pre-flop, 1: Flop, 2: Turn, 3: River
     let isGameOver = true;
-    let isPlayerTurn = true;
     let lastRaiser = null; // 最後にレイズした人 ('player' or 'dealer')
 
     // ----------------------------------------------------
-    //  ユーティリティ関数 (ブラックジャックから継承/調整)
+    //  ユーティリティ関数
     // ----------------------------------------------------
 
     function getDealerMessage(type, amount = 0, handName = '') {
-        // AAとセリフのロジックをポーカー用に調整
         let aa = '';
         let message = '';
-        const potMsg = `ポット総額は ${pot} よ。`;
+        const potMsg = `ポット ${pot}`;
 
         switch (type) {
             case 'start':
@@ -221,11 +309,11 @@
                 break;
             case 'ante':
                 aa = '(^_^)';
-                message = `アンティ ${amount} が賭けられました。さあ、勝負よ！`;
+                message = `アンティ ${amount}。さあ、勝負よ！`;
                 break;
             case 'flop':
                 aa = '(°ω°)';
-                message = `フロップ！3枚のカードが公開されたわ。`;
+                message = `フロップ！3枚のカードよ。`;
                 break;
             case 'turn':
                 aa = '(-ω-)';
@@ -237,36 +325,44 @@
                 break;
             case 'dealer_bet':
                 aa = '(^-^)/';
-                message = `ディーラーが ${amount} ベット。あなたの番よ。` + potMsg;
+                message = `ディーラーが ${amount} ベット。${potMsg}。`;
                 break;
             case 'dealer_call':
                 aa = '(-_-)';
-                message = `ディーラーはコール。次のカードを開けるわ。` + potMsg;
+                message = `ディーラーはコール。次のカードを開けるわ。`;
                 break;
             case 'dealer_raise':
                 aa = 'o(^-^)o';
-                message = `ディーラーが ${amount} にレイズ。どうする？` + potMsg;
+                message = `ディーラーが ${amount} にレイズ。どうする？`;
                 break;
             case 'dealer_check':
                 aa = '(^_^)';
-                message = `ディーラーはチェック。` + potMsg;
+                message = `ディーラーはチェック。`;
                 break;
             case 'player_win':
                 aa = '(^O^)/';
-                message = `🎉 **あなたの大勝利！** ${handName} が完成よ。ポット ${amount} を獲得！`;
+                message = `🎉 **${handName}** で勝利！ポット ${pot} を獲得！`;
                 break;
             case 'dealer_win':
                 aa = '(-_メ)';
-                message = `💔 **ルーズ・ユア・ベット。** ディーラーの ${handName} に負けたわ。`;
+                message = `💔 ${handName} に負けたわ。チップを失ったわね。`;
                 break;
             case 'push':
                 aa = '(-_-)';
-                message = `プッシュ（引き分け）。ポット ${amount} を分け合うわ。`;
+                message = `プッシュ（引き分け）。ポットを分け合うわ。`;
                 break;
             case 'player_fold':
                 aa = '・_・';
-                message = `フォールドね。ポット ${amount} はディーラーのものよ。`;
+                message = `フォールドね。ポットはディーラーのものよ。`;
                 break;
+            case 'dealer_fold':
+                aa = '＼(>_<)／';
+                message = `ディーラーが降りたわ！ポット ${amount} を獲得！`;
+                break;
+            case 'default':
+                 aa = '^_^';
+                 message = handName;
+                 break;
             default:
                 aa = '^_^;';
                 message = '次の勝負へどうぞ。';
@@ -278,15 +374,18 @@
 
     function updateDisplay() {
         chipsAmountEl.textContent = chips;
-        potAmountEl.textContent = pot;
+        potAmountEl.textContent = pot + dealerBet + playerBet; // ポット総額は現在賭けられている額も含む
         dealerCurrentBetEl.textContent = dealerBet;
         playerCurrentBetEl.textContent = playerBet;
         anteAmountInput.max = chips;
         raiseAmountInput.max = chips;
+        
+        // レイアウト崩れ対策: 入力値が残チップを超えないように調整
+        if (parseInt(anteAmountInput.value) > chips) anteAmountInput.value = chips;
+        if (parseInt(raiseAmountInput.value) > chips) raiseAmountInput.value = chips;
     }
 
     function createAndShuffleDeck() {
-        // Deckの作成とシャッフル (Blackjackと共通)
         deck = [];
         for (let suit of SUITS) {
             for (let value of VALUES) {
@@ -304,7 +403,6 @@
     }
 
     function getCardHtml(card, isHidden = false) {
-        // カードHTMLの描画 (Blackjackと共通)
         if (isHidden) {
             return `<div class="card hidden">POKER<br>CARD</div>`;
         }
@@ -312,14 +410,13 @@
         return `
             <div class="card" style="color: ${color};">
                 <div class="card-value">${card.value}</div>
-                <div class="card-suit" style="font-size: 1.5em;">${card.suit}</div>
+                <div class="card-suit">${card.suit}</div>
                 <div class="card-value">${card.value}</div>
             </div>
         `;
     }
 
     function renderHands(showDealer = false) {
-        // カードの描画ロジック
         dealerCardsEl.innerHTML = dealerHand.map(card => 
             getCardHtml(card, !showDealer)
         ).join('');
@@ -332,31 +429,31 @@
             getCardHtml(card)
         ).join('');
 
-        // 役の表示はショーダウン（showDealer=true）の時のみ
-        if (showDealer) {
+        if (showDealer && communityCards.length === 5) {
              const playerResult = evaluateHand([...playerHand, ...communityCards]);
              const dealerResult = evaluateHand([...dealerHand, ...communityCards]);
              playerHandStatusEl.textContent = playerResult.name;
              dealerHandStatusEl.textContent = dealerResult.name;
         } else {
-             playerHandStatusEl.textContent = '?';
+             playerHandStatusEl.textContent = communityCards.length >= 3 ? evaluateHand([...playerHand, ...communityCards]).name : '？';
              dealerHandStatusEl.textContent = '?';
         }
     }
 
     // ----------------------------------------------------
-    //  ポーカー役の判定ロジック (最も重要な部分)
+    //  ポーカー役の判定ロジック (簡易版)
     // ----------------------------------------------------
 
+    /** * 7枚のカードから最も強い5枚の役を判定する簡易版ロジック
+     * (厳密なキッカー判定やストフラ判定は省略しています)
+     */
     function evaluateHand(cards) {
-        // 7枚のカードから最も強い5枚の役を見つけるロジックを実装します (非常に複雑なため、ここは後で詳細に作り込みます)
-        // 今回は簡略化し、7枚から役を判定する簡易ロジックを一旦記述します。
+        if (cards.length < 5) return { rank: 0, name: 'カード不足', highCardValue: 0 };
         
-        if (cards.length < 5) return { rank: 0, name: 'カード不足' };
-
-        // 簡易役判定（ここでは一旦、全てのカードから役を判定する簡易版）
+        // 1. 各数字とマークの出現回数をカウント
         const valuesCount = cards.reduce((acc, card) => {
-            acc[card.value] = (acc[card.value] || 0) + 1;
+            const value = card.value;
+            acc[value] = (acc[value] || 0) + 1;
             return acc;
         }, {});
         
@@ -365,9 +462,8 @@
             return acc;
         }, {});
 
-        let rank = 0; // 初期値: ハイカード
-
-        // ワンペア、ツーペア、スリーカード、フォーカードの判定
+        // 2. 役の判定
+        let rank = 0; 
         let pairs = 0;
         let triples = 0;
         let quads = 0;
@@ -378,56 +474,47 @@
             if (count === 4) quads++;
         }
 
-        if (quads > 0) {
-            rank = 7; // フォーカード
-        } else if (triples > 0 && pairs > 0) {
-            rank = 6; // フルハウス
-        } else if (triples > 0) {
-            rank = 3; // スリーカード
-        } else if (pairs >= 2) {
-            rank = 2; // ツーペア
-        } else if (pairs === 1) {
-            rank = 1; // ワンペア
-        }
+        // ペア系
+        if (quads > 0) rank = 7; // フォーカード
+        else if (triples > 0 && pairs >= 1) rank = 6; // フルハウス
+        else if (triples > 0) rank = 3; // スリーカード
+        else if (pairs >= 2) rank = 2; // ツーペア
+        else if (pairs === 1) rank = 1; // ワンペア
 
-        // フラッシュの判定
-        let isFlush = Object.values(suitsCount).some(count => count >= 5);
-        if (isFlush) {
-            rank = Math.max(rank, 5);
-        }
-
-        // ストレートの判定
-        let numValues = Object.keys(VALUE_MAP).map(v => VALUE_MAP[v]).sort((a, b) => a - b);
+        // ストレート判定
         let uniqueValues = [...new Set(cards.map(card => VALUE_MAP[card.value]))].sort((a, b) => a - b);
+        if (uniqueValues.includes(14)) uniqueValues.unshift(1); // エースを1として扱う
         
-        // A, 2, 3, 4, 5 のストレート (ホイール) のために 1 (エースを1として) を追加
-        if (uniqueValues.includes(14)) uniqueValues.unshift(1); 
-
         let isStraight = false;
+        let highStraightValue = 0;
         if (uniqueValues.length >= 5) {
             for (let i = 0; i <= uniqueValues.length - 5; i++) {
                 if (uniqueValues[i+4] === uniqueValues[i] + 4) {
                     isStraight = true;
-                    break;
+                    highStraightValue = uniqueValues[i+4];
                 }
             }
         }
-        if (isStraight) {
-            rank = Math.max(rank, 4);
-        }
-        
-        // ストレートフラッシュ、ロイヤルストレートフラッシュの判定 (複雑なため、ここでは一旦ストレートとフラッシュが両立すればOKとする)
-        if (isStraight && isFlush) {
-             // 5枚の最強の組み合わせを特定するロジックが必要だが、簡易版では一旦 8 or 9 とする
-             rank = 8; 
-             // ロイヤルストレートフラッシュの判定もここでは省略
-        }
-        
-        // ★注意: この簡易判定では、複数の役が可能な7枚のカードから「最も強い5枚」を選ぶというポーカーのルールを厳密に再現できていません。
-        // しかし、ゲームのテストと進行のために、一旦この簡略版で進めます。最終的に完全な判定ロジックが必要です。
+        if (isStraight) rank = Math.max(rank, 4); // ストレート
 
-        return { rank: rank, name: HAND_RANKINGS[rank] };
+        // フラッシュ判定
+        let isFlush = Object.values(suitsCount).some(count => count >= 5);
+        if (isFlush) rank = Math.max(rank, 5); // フラッシュ
+
+        // ストレートフラッシュ判定
+        if (isStraight && isFlush) {
+             rank = 8;
+             // ロイヤルストレートフラッシュ (A-K-Q-J-T)
+             if (highStraightValue === 14) rank = 9; 
+        }
+        
+        // ハイカード判定 (同ランクの優劣決定用)
+        let highCardValue = uniqueValues[uniqueValues.length - 1] || 0;
+
+
+        return { rank: rank, name: HAND_RANKINGS[rank], highCardValue: highCardValue };
     }
+
 
     // ----------------------------------------------------
     //  ゲームフロー関数
@@ -458,8 +545,9 @@
     }
 
     function startGame() {
-        if (chips < parseInt(anteAmountInput.value)) {
-            messageEl.innerHTML = getDealerMessage('start') + 'チップが不足しています。';
+        const ante = parseInt(anteAmountInput.value);
+        if (chips < ante) {
+            messageEl.innerHTML = getDealerMessage('default', 0, 'チップが不足しています。アンティを減らしてください。');
             return;
         }
 
@@ -467,11 +555,10 @@
         createAndShuffleDeck();
         
         // アンティの処理
-        const ante = parseInt(anteAmountInput.value);
         chips -= ante;
-        pot += ante;
+        pot += ante * 2; // ディーラーとプレイヤーのアンティ
         playerBet = ante;
-        dealerBet = ante; // ディーラーのアンティはpotに含めるだけでチップ残高は減らさない（AIのため）
+        dealerBet = ante; 
         
         // カードの配布 (手札2枚ずつ)
         playerHand.push(drawCard(), drawCard());
@@ -484,57 +571,66 @@
 
         // 最初のベッティングラウンドへ (フロップ前)
         currentBettingRound = 0;
-        lastRaiser = 'dealer'; // 最初のベットはディーラー側から始まる（ポーカーのルール）
-        playerActionPhase();
+        lastRaiser = 'dealer'; // ディーラーからアクション開始
+        
+        // フロップ前のベッティングラウンドはディーラーが先にアクションする（簡易版）
+        dealerAction();
     }
     
     function dealerAction() {
-        // 簡易AIロジック
-        
-        // ディーラーの簡易評価 (手札2枚のみ)
-        const dealerRank = evaluateHand(dealerHand).rank;
-        const requiredCall = dealerBet - playerBet;
-        const currentPot = pot;
+        // ディーラーのAIロジック
+        const cardsToEvaluate = [...dealerHand, ...communityCards];
+        const dealerResult = evaluateHand(cardsToEvaluate);
+        const requiredCall = playerBet - dealerBet;
+        const currentPot = pot + dealerBet + playerBet;
         let action = 'check';
         let raiseAmount = 0;
-
-        // 役ができていない場合、強気なベットにはコールしない
-        if (dealerRank <= 1 && playerBet > dealerBet && requiredCall > pot * 0.1) {
-            action = 'fold';
-        } 
-        // 役ができている場合、コール/レイズを検討
-        else if (dealerRank >= 2 || (dealerRank === 1 && VALUE_MAP[dealerHand[0].value] >= 10 && VALUE_MAP[dealerHand[1].value] >= 10)) {
-            // ペアができている、または高いカード（T, J, Q, K, A）を持っている場合
-            if (requiredCall > 0) {
-                // プレイヤーがレイズした場合、コール
-                action = 'call';
-            } else if (Math.random() < 0.25) {
-                // 誰も賭けていない場合、25%の確率でベット
-                action = 'bet';
-                raiseAmount = Math.max(playerBet * 2, 20); // 最小20チップ
+        
+        const winProbability = dealerResult.rank / 10; // 簡易的な勝率予測 (0.1〜1.0)
+        
+        // 1. プレイヤーがフォールドできるほどレイズしたか？
+        if (requiredCall > 0) {
+            if (requiredCall > currentPot * 0.3) { // プレイヤーの大幅なレイズ
+                if (winProbability < 0.4) { action = 'fold'; } else { action = 'call'; }
+            } else {
+                 if (winProbability < 0.2) { action = 'fold'; } else { action = 'call'; }
             }
         } 
-        
+        // 2. 誰も賭けていない場合（またはディーラーがレイズ検討）
+        else {
+            if (winProbability > 0.6 || (dealerResult.rank >= 2 && Math.random() < 0.3)) { // 役ができているか、強気でベット
+                action = 'bet';
+                raiseAmount = Math.max(playerBet + 10, 20); // 最低20チップをベット
+            } else {
+                action = 'check';
+            }
+        }
+
         // 最終的なアクション実行
         if (action === 'fold') {
-            endGame('dealer_fold');
+            endGame('dealer_fold', currentPot);
         } else if (action === 'call') {
             pot += requiredCall;
             dealerBet += requiredCall;
             messageEl.innerHTML = getDealerMessage('dealer_call');
             // アクションが完了したので、次のフェーズへ
             setTimeout(nextPhase, 1000); 
-        } else if (action === 'bet' || action === 'raise') {
-            const betAmount = raiseAmount;
-            pot += betAmount;
-            dealerBet += betAmount;
-            messageEl.innerHTML = getDealerMessage('dealer_raise', betAmount);
+        } else if (action === 'bet') {
+            const toBet = raiseAmount - dealerBet;
+            pot += toBet;
+            dealerBet = raiseAmount;
+            messageEl.innerHTML = getDealerMessage('dealer_bet', raiseAmount);
             lastRaiser = 'dealer';
             playerActionPhase(); // 再度プレイヤーの番
-        } else { // Check
+        } else if (action === 'check') {
             messageEl.innerHTML = getDealerMessage('dealer_check');
-            // アクションが完了したので、次のフェーズへ
-            setTimeout(nextPhase, 1000); 
+            if (lastRaiser === 'dealer' && currentBettingRound === 0) {
+                // 最初のラウンドでチェックの場合はプレイヤーアクションへ
+                playerActionPhase();
+            } else {
+                // チェックで一周したので次のフェーズへ
+                setTimeout(nextPhase, 1000); 
+            }
         }
         
         updateDisplay();
@@ -544,26 +640,30 @@
         // ボタンの制御
         dealButton.style.display = 'none';
         postGameButtons.style.display = 'none';
-        actionButtons.style.display = 'block';
+        actionButtons.style.display = 'flex';
         
         const requiredCall = dealerBet - playerBet;
-        const isDealerBetting = dealerBet > 0;
         
         foldButton.disabled = false;
-        raiseButton.disabled = false;
         
         if (requiredCall > 0) {
-            // コールが必要
+            // コールが必要 (相手がレイズ/ベットしている)
             checkCallButton.textContent = `コール (${requiredCall})`;
             checkCallButton.disabled = chips < requiredCall;
+            raiseButton.disabled = chips < requiredCall + 10;
         } else {
-            // チェック可能
+            // チェック可能 (誰も賭けていない)
             checkCallButton.textContent = 'チェック';
             checkCallButton.disabled = false;
+            raiseButton.disabled = chips < 10;
         }
         
-        // レイズ額の最小値制御
+        // レイズ額の最小値制御: 相手のベット額との差額 + 最小レイズ額 (10)
         raiseAmountInput.min = Math.max(requiredCall + 10, 10);
+        // レイズ額の自動調整 (最大値)
+        if (parseInt(raiseAmountInput.value) < raiseAmountInput.min) {
+            raiseAmountInput.value = raiseAmountInput.min;
+        }
     }
 
     function handlePlayerAction(type) {
@@ -573,7 +673,7 @@
         const raiseAmount = parseInt(raiseAmountInput.value);
         
         if (type === 'fold') {
-            endGame('player_fold');
+            endGame('player_fold', pot + dealerBet + playerBet);
             return;
         } 
         
@@ -585,8 +685,9 @@
                 pot += requiredCall;
                 playerBet += requiredCall;
                 
-                // コール後はディーラーアクションが完了したと見なし、次のフェーズへ
                 messageEl.innerHTML = getDealerMessage('default', 0, 'あなたはコールしました。');
+                
+                // コールでアクション一周
                 setTimeout(nextPhase, 1000);
             } else { // チェック
                 // チェック後はディーラーアクションへ移行
@@ -598,16 +699,16 @@
         
         // レイズ
         if (type === 'raise') {
-            if (raiseAmount <= requiredCall || chips < raiseAmount) return;
+            if (raiseAmount < requiredCall + 10 || chips < raiseAmount) return;
 
-            const totalRaise = raiseAmount; // レイザーの総ベット額
-            const toBet = totalRaise - playerBet; // ポットに入れる追加チップ
+            const totalBet = raiseAmount; // プレイヤーの総ベット額
+            const toBet = totalBet - playerBet; // ポットに入れる追加チップ
             
             chips -= toBet;
             pot += toBet;
-            playerBet = totalRaise; // プレイヤーの総ベット額を更新
+            playerBet = totalBet; 
             
-            messageEl.innerHTML = getDealerMessage('default', 0, `あなたは ${totalRaise} にレイズしました。`);
+            messageEl.innerHTML = getDealerMessage('default', 0, `あなたは ${totalBet} にレイズしました。`);
             lastRaiser = 'player';
             // レイズ後はディーラーアクションへ移行
             dealerAction();
@@ -620,12 +721,12 @@
     function nextPhase() {
         if (isGameOver) return;
         
-        // ベットをリセット
-        pot += dealerBet; 
-        pot += playerBet; 
+        // ポットにベット額を移動し、リセット
+        pot += dealerBet + playerBet; 
         dealerBet = 0;
         playerBet = 0;
-        
+        lastRaiser = null; // リセット
+
         currentBettingRound++;
         
         if (currentBettingRound === 1) {
@@ -649,7 +750,7 @@
         renderHands(false);
         updateDisplay();
         
-        // 次のベッティングラウンド開始 (チェックから)
+        // 次のベッティングラウンド開始 (プレイヤーからアクション)
         playerActionPhase(); 
         checkCallButton.textContent = 'チェック';
     }
@@ -668,19 +769,25 @@
         } else if (playerResult.rank < dealerResult.rank) {
             winner = 'dealer';
         } else {
-            // 同一ランクの場合のキッカー判定（簡易版では省略し、引き分けとします）
+            // 簡易版なので、同ランクの場合はハイカード勝負をせず引き分け
             winner = 'push'; 
         }
+        
+        let finalPot = pot + dealerBet + playerBet;
 
         if (winner === 'player') {
-            chips += pot;
-            messageEl.innerHTML = getDealerMessage('player_win', pot, playerResult.name);
+            chips += finalPot;
+            messageEl.innerHTML = getDealerMessage('player_win', finalPot, playerResult.name);
         } else if (winner === 'dealer') {
             messageEl.innerHTML = getDealerMessage('dealer_win', 0, dealerResult.name);
         } else {
-            chips += Math.floor(pot / 2);
-            messageEl.innerHTML = getDealerMessage('push', pot);
+            chips += Math.floor(finalPot / 2);
+            messageEl.innerHTML = getDealerMessage('push', finalPot);
         }
+
+        pot = 0;
+        dealerBet = 0;
+        playerBet = 0;
 
         updateDisplay();
         dealButton.style.display = 'none';
@@ -688,18 +795,18 @@
         postGameButtons.style.display = 'block';
     }
 
-    function endGame(reason) {
+    function endGame(reason, finalPot) {
         isGameOver = true;
-        let finalPot = pot + dealerBet + playerBet;
-
+        
         if (reason === 'player_fold') {
             messageEl.innerHTML = getDealerMessage('player_fold', finalPot);
         } else if (reason === 'dealer_fold') {
             chips += finalPot;
-            messageEl.innerHTML = getDealerMessage('player_win', finalPot, 'ディーラーが降りました！');
+            messageEl.innerHTML = getDealerMessage('dealer_fold', finalPot);
         }
         
-        pot = 0; // ポットは勝者が総取りしたのでリセット
+        pot = 0; dealerBet = 0; playerBet = 0;
+
         updateDisplay();
         dealButton.style.display = 'none';
         actionButtons.style.display = 'none';
@@ -708,7 +815,7 @@
 
 
     // ----------------------------------------------------
-    //  イベントリスナー
+    //  イベントリスナー / 初期化
     // ----------------------------------------------------
     dealButton.addEventListener('click', startGame);
     document.getElementById('nextGameButton').addEventListener('click', resetGame);
@@ -717,9 +824,19 @@
     foldButton.addEventListener('click', () => handlePlayerAction('fold'));
     checkCallButton.addEventListener('click', () => handlePlayerAction('call_check'));
     raiseButton.addEventListener('click', () => handlePlayerAction('raise'));
+    
+    // ルールモーダルの制御
+    function hideModal() {
+        ruleModal.style.display = 'none';
+        resetGame();
+    }
+    closeModalButton.addEventListener('click', hideModal);
 
-    // 初期化
-    resetGame();
+    // 初期化時はモーダルを表示
+    updateDisplay();
+    ruleModal.style.display = 'flex';
+    messageEl.innerHTML = getDealerMessage('default', 0, 'ルールを確認中です...');
+
 </script>
 </body>
 </html>
