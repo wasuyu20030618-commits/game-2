@@ -101,13 +101,13 @@
 
 
         /* ======================== */
-        /* メッセージポップアップ (視認性改善のため下部に固定) */
+        /* メッセージポップアップ (右下に固定) */
         /* ======================== */
         #messagePopup {
             position: fixed;
-            bottom: 20px; /* 画面下部に固定 */
-            left: 50%;
-            transform: translateX(-50%);
+            bottom: 20px; 
+            right: 20px; /* 右側に寄せる */
+            transform: none; /* 中央寄せを解除 */
             background-color: rgba(255, 255, 255, 0.95);
             color: #333;
             padding: 15px 25px;
@@ -118,7 +118,7 @@
             z-index: 50;
             cursor: pointer;
             display: none;
-            max-width: 90%; /* 横幅を広げる */
+            max-width: 300px; /* ポップアップをコンパクトにする */
             text-align: left;
         }
         .dealer-aa { 
@@ -600,7 +600,7 @@
                 // 固定のフロップカードを設定 (K♣ J♠ A♦) -> ストレートドロー (Q, T)
                 communityCards = [makeCard('♣', 'T'), makeCard('♠', 'J'), makeCard('♦', 'A')]; // T J A -> Qでストレート
                 renderHands(false);
-                displayDealerMessage('default', 0, '', 'フロップが開きました！あなたの手札 (Q) と場札で <span class="highlight">ストレート</span>が完成する可能性が非常に高くなりました！');
+                displayDealerMessage('default', 0, '', 'フロップが開きました！あなたの手札 (Q, K) と場札 (T, J, A) を合わせると、<span class="highlight">Qか9があればストレートが完成</span>します。');
                 
                 // ベット額リセット
                 pot += dealerBet + playerBet; 
@@ -614,11 +614,11 @@
                 // ディーラーのチェック後の処理
                 displayDealerMessage('default', 0, '', 'ディーラーもチェックしました。4枚目のカード、<span class="highlight">ターン</span> が開かれます。');
                 break;
-            case 7: // ターン後の説明
+            case 7: // ターン後の説明 (修正点)
                 // ターンカード (T♥) -> ストレート完成！
                 communityCards.push(makeCard('♥', 'Q'));
                 renderHands(false);
-                displayDealerMessage('default', 0, '', 'ターンが開きました！あなたの手札と場札で <span class="highlight">ストレート</span> が完成しました！');
+                displayDealerMessage('default', 0, '', 'ターンが開きました！<span class="highlight">ストレートが完成</span>しました！手札のQと場札のT, J, Q, Aで最強クラスの役です。');
                 
                 // ベット額リセット
                 pot += dealerBet + playerBet; 
@@ -628,7 +628,7 @@
                 // プレイヤーのベットを強制
                 playerActionPhase();
                 raiseAmountInput.value = 30; // レイズ額を固定
-                displayDealerMessage('default', 0, '', 'チャンスです！<span class="highlight">レイズ (30)</span> を選び、チップを増やしましょう！');
+                displayDealerMessage('default', 0, '', '役が完成した大チャンスです！<span class="highlight">レイズ (30)</span> を選び、大きくチップを増やしましょう！');
                 break; // プレイヤーのクリックを待つため、break
             case 8:
                 // ディーラーがコールした後のショーダウンへ
@@ -648,7 +648,7 @@
                 nextGameButton.textContent = '通常ゲームへ'; // ボタンテキスト修正
                 nextGameButton.onclick = () => {
                     alert('チュートリアルを終了し、通常ゲームへ移行します。頑張ってチップを増やしましょう！');
-                    resetGame(false); // モーダルなしで通常ゲームへ
+                    resetGame(false); // モーダルなしで通常ゲーム（ゲーム開始画面）へ
                 };
                 break;
         }
@@ -687,8 +687,9 @@
         postGameButtons.style.display = 'none';
         ruleButton.style.display = 'inline-block';
         
-        nextGameButton.textContent = '次の勝負へ'; // ボタンテキストをデフォルトに戻す
-        nextGameButton.onclick = () => resetGame(false); // デフォルトの動作に戻す
+        // 次のゲームボタンの動作をデフォルトに戻す
+        nextGameButton.textContent = '次の勝負へ'; 
+        nextGameButton.onclick = () => resetGame(false); 
         
         if (shouldShowRuleModal) {
             ruleModal.style.display = 'flex'; // 初回はルール表示
