@@ -88,11 +88,12 @@
             width: 60px; height: 35px; font-size: 1.2em; padding: 5px;
         }
 
-        #actionButtons button, #dealButton, #nextGameButton, #ruleButton {
+        #actionButtons button, #dealButton, #nextGameButton, #ruleButton, #tutorialButton {
              padding: 8px 15px; font-size: 0.9em; margin: 0 2px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
         }
         
         #ruleButton { background-color: #00bcd4; color: #fff; }
+        #tutorialButton { background-color: #ffc107; color: #333; } /* チュートリアルボタン */
         #dealButton { background-color: #2196f3; color: #fff; }
         #foldButton { background-color: #8b0000; color: #fff; }
         #checkCallButton { background-color: #ff9800; color: #fff; }
@@ -124,6 +125,12 @@
             font-size: 1.5em; 
             display: inline-block; 
             margin-right: 10px;
+        }
+        .highlight {
+            color: #8B0000;
+            font-weight: bold;
+            border-bottom: 2px solid #ffc107;
+            padding-bottom: 2px;
         }
 
         /* ======================== */
@@ -224,6 +231,7 @@
 <div class="container">
     <h1>POKER (簡易版)</h1>
     <button id="ruleButton">ルール確認</button>
+    <button id="tutorialButton">💡チュートリアル</button>
     
     <div id="infoBar">
         <div class="info-item">
@@ -314,6 +322,7 @@
     const ruleModal = document.getElementById('ruleModal');
     const closeModalButton = document.getElementById('closeModal');
     const ruleButton = document.getElementById('ruleButton');
+    const tutorialButton = document.getElementById('tutorialButton');
     
     // ゲーム変数
     let chips = 1000;
@@ -327,96 +336,58 @@
     let currentBettingRound = 0; // 0: Pre-flop, 1: Flop, 2: Turn, 3: River
     let isGameOver = true;
     let lastRaiser = null; // 最後にレイズ/ベットした人 ('player' or 'dealer')
+    let isTutorial = false; // チュートリアルモードかどうか
+    let tutorialStep = 0; // チュートリアルのステップ
 
     // ----------------------------------------------------
     //  ユーティリティ関数
     // ----------------------------------------------------
 
-    function displayDealerMessage(type, amount = 0, handName = '') {
-        const messageHtml = getDealerMessage(type, amount, handName);
+    function displayDealerMessage(type, amount = 0, handName = '', customMessage = '') {
+        const messageHtml = getDealerMessage(type, amount, handName, customMessage);
         messagePopupEl.innerHTML = messageHtml;
         messagePopupEl.style.display = 'block';
     }
 
     window.hideMessagePopup = function() {
         messagePopupEl.style.display = 'none';
+        
+        // チュートリアルモードの場合、ポップアップを閉じたら次のステップへ
+        if (isTutorial) {
+            handleTutorialStep();
+        }
     }
 
-    function getDealerMessage(type, amount = 0, handName = '') {
+    function getDealerMessage(type, amount = 0, handName = '', customMessage = '') {
         let aa = '';
-        let message = '';
+        let message = customMessage || '';
         const currentPot = pot + dealerBet + playerBet;
         const potMsg = `ポット: ${currentPot}`;
 
-        switch (type) {
-            case 'start':
-                aa = '(*^.^*)';
-                message = `アンティを決めて、ゲーム開始よ！`;
-                break;
-            case 'ante':
-                aa = '(^_^)';
-                message = `アンティ ${amount}。さあ、勝負よ！`;
-                break;
-            case 'flop':
-                aa = '(°ω°)';
-                message = `フロップ！3枚のカードが公開されたわ。${potMsg}`;
-                break;
-            case 'turn':
-                aa = '(-ω-)';
-                message = `ターン！4枚目のカードよ。${potMsg}`;
-                break;
-            case 'river':
-                aa = '(メ_メ)';
-                message = `リバー！最終カードよ。${potMsg}`;
-                break;
-            case 'dealer_bet':
-                aa = '(^-^)/';
-                message = `ディーラーが ${amount} ベット。あなたの番よ。`;
-                break;
-            case 'dealer_call':
-                aa = '(-_-)';
-                message = `ディーラーはコール。次のアクションに移るわ。`;
-                break;
-            case 'dealer_raise':
-                aa = 'o(^-^)o';
-                message = `ディーラーが ${amount} にレイズ。どうする？`;
-                break;
-            case 'dealer_check':
-                aa = '(^_^)';
-                message = `ディーラーはチェックよ。あなたの番よ。`;
-                break;
-            case 'player_win_showdown':
-                aa = '(^O^)/';
-                message = `🎉 **${handName}** で勝利！ポット ${currentPot} を獲得！`;
-                break;
-            case 'dealer_win_showdown':
-                aa = '(-_メ)';
-                message = `💔 ${handName} に負けたわ。チップを失ったわね。`;
-                break;
-            case 'push':
-                aa = '(-_-)';
-                message = `プッシュ（引き分け）。ポット ${currentPot} を分け合うわ。`;
-                break;
-            case 'player_fold':
-                aa = '・_・';
-                message = `フォールドね。ポット ${currentPot} はディーラーのものよ。`;
-                break;
-            case 'dealer_fold':
-                aa = '＼(>_<)／';
-                message = `ディーラーが降りたわ！ポット ${currentPot} を獲得！`;
-                break;
-            case 'default':
-                 aa = '^_^';
-                 message = handName;
-                 break;
-            default:
-                aa = '^_^;';
-                message = '次の勝負へどうぞ。';
+        if (customMessage) {
+             aa = isTutorial ? '(🤖)' : '(^_^;)';
+        } else {
+            switch (type) {
+                case 'start': aa = '(*^.^*)'; message = `アンティを決めて、ゲーム開始よ！`; break;
+                case 'ante': aa = '(^_^)'; message = `アンティ ${amount}。さあ、勝負よ！`; break;
+                case 'flop': aa = '(°ω°)'; message = `フロップ！3枚のカードが公開されたわ。${potMsg}`; break;
+                case 'turn': aa = '(-ω-)'; message = `ターン！4枚目のカードよ。${potMsg}`; break;
+                case 'river': aa = '(メ_メ)'; message = `リバー！最終カードよ。${potMsg}`; break;
+                case 'dealer_bet': aa = '(^-^)/'; message = `ディーラーが ${amount} ベット。あなたの番よ。`; break;
+                case 'dealer_call': aa = '(-_-)'; message = `ディーラーはコール。次のアクションに移るわ。`; break;
+                case 'dealer_raise': aa = 'o(^-^)o'; message = `ディーラーが ${amount} にレイズ。どうする？`; break;
+                case 'dealer_check': aa = '(^_^)'; message = `ディーラーはチェックよ。あなたの番よ。`; break;
+                case 'player_win_showdown': aa = '(^O^)/'; message = `🎉 **${handName}** で勝利！ポット ${currentPot} を獲得！`; break;
+                case 'dealer_win_showdown': aa = '(-_メ)'; message = `💔 ${handName} に負けたわ。チップを失ったわね。`; break;
+                case 'push': aa = '(-_-)'; message = `プッシュ（引き分け）。ポット ${currentPot} を分け合うわ。`; break;
+                case 'player_fold': aa = '・_・'; message = `フォールドね。ポット ${currentPot} はディーラーのものよ。`; break;
+                case 'dealer_fold': aa = '＼(>_<)／'; message = `ディーラーが降りたわ！ポット ${currentPot} を獲得！`; break;
+                default: aa = '^_^;'; message = '次の勝負へどうぞ。';
+            }
         }
         
-        return `<div class="dealer-aa">${aa}</div>${message}`;
+        return `<div class="dealer-aa">${aa}</div>${message}<br><small>(クリックで次へ)</small>`;
     }
-
 
     function updateDisplay() {
         chipsAmountEl.textContent = chips;
@@ -445,6 +416,11 @@
 
     function drawCard() {
         return deck.pop();
+    }
+
+    // カードオブジェクトを生成するヘルパー関数
+    function makeCard(suit, value) {
+        return { suit, value };
     }
 
     function getCardHtml(card, isHidden = false) {
@@ -492,10 +468,11 @@
     }
 
     // ----------------------------------------------------
-    //  ポーカー役の判定ロジック (簡易版)
+    //  ポーカー役の判定ロジック (簡易版) - 割愛
     // ----------------------------------------------------
     function evaluateHand(cards) {
-        if (cards.length < 5) return { rank: 0, name: 'カード不足', highCardValue: 0 };
+        // ... (役の判定ロジックは前回のものをそのまま使用)
+        if (cards.length < 5) return { rank: 0, name: 'ハイカード', highCardValue: 0 };
         
         const valuesCount = cards.reduce((acc, card) => {
             const value = card.value;
@@ -554,10 +531,119 @@
 
 
     // ----------------------------------------------------
+    //  チュートリアル機能
+    // ----------------------------------------------------
+    
+    function startTutorial() {
+        // 全ゲームリセット
+        resetGame(false); 
+        isTutorial = true;
+        tutorialStep = 0;
+        
+        chips = 200; // チュートリアル用のチップ
+        
+        // UIの初期化
+        dealButton.style.display = 'none';
+        tutorialButton.style.display = 'none';
+        anteAmountInput.value = 10;
+        
+        // 固定のカードを設定 (プレイヤー: Q♥ K♥, ディーラー: 7♠ 7♣)
+        playerHand = [makeCard('♥', 'Q'), makeCard('♥', 'K')];
+        dealerHand = [makeCard('♠', '7'), makeCard('♣', '7')];
+        
+        // 固定の場札 (フロップでストレートの可能性/フラッシュドロー)
+        communityCards = [];
+        
+        updateDisplay();
+        renderHands(false);
+        
+        // 最初のステップへ
+        displayDealerMessage('default', 0, '', 'ようこそポーカーチュートリアルへ！<br>ここでは、ポーカーの基本的な流れとアクションを学びます。');
+    }
+
+    function handleTutorialStep() {
+        tutorialStep++;
+        
+        // チュートリアルの進行ロジック
+        switch(tutorialStep) {
+            case 1:
+                displayDealerMessage('default', 0, '', 'まず、ゲーム開始の参加料としてお互いにチップを賭けます。これを <span class="highlight">アンティ</span> と呼びます。今回は10チップずつ賭けました。');
+                chips -= 10;
+                pot += 20; 
+                playerBet = 10;
+                dealerBet = 10;
+                updateDisplay();
+                break;
+            case 2:
+                displayDealerMessage('default', 0, '', 'あなたとディーラーに <span class="highlight">手札（ホールカード）</span> が2枚配られました。強い役を目指して、この手札だけで勝負するかを判断します。');
+                break;
+            case 3:
+                displayDealerMessage('default', 0, '', 'ディーラーが20チップを <span class="highlight">ベット</span> してきました。あなたは今、あと10チップを払う必要があります。');
+                // ディーラーがレイズした状態を強制
+                pot += 10;
+                dealerBet += 10;
+                updateDisplay();
+                playerActionPhase();
+                // プレイヤーにアクションを促す（ボタンをアクティブにする）
+                displayDealerMessage('default', 0, '', 'ここであなたのアクションです。<br>相手のベット額に合わせる <span class="highlight">コール(10)</span> を選んでみましょう。');
+                break; // プレイヤーのクリックを待つため、break
+            case 4:
+                // nextPhaseで呼ばれる
+                displayDealerMessage('default', 0, '', 'コールが完了しました。次に <span class="highlight">フロップ</span> として場札が3枚開かれます。');
+                break;
+            case 5: // フロップ後の説明
+                // 固定のフロップカードを設定 (K♣ J♠ A♦) -> ストレートドロー (Q, T)
+                communityCards = [makeCard('♣', 'K'), makeCard('♠', 'J'), makeCard('♦', 'A')];
+                renderHands(false);
+                displayDealerMessage('default', 0, '', 'フロップが開きました！<br>あなたの手札と場札を合わせると、<span class="highlight">ストレート</span>が完成する可能性がある状態です。');
+                playerActionPhase();
+                displayDealerMessage('default', 0, '', '誰もベットしていないので、今回は <span class="highlight">チェック</span> を選び、タダで次のカードを見ましょう。');
+                break; // プレイヤーのクリックを待つため、break
+            case 6: // ターン後の説明
+                // ターンカード (T♥) -> ストレート完成！
+                communityCards.push(makeCard('♥', 'T'));
+                renderHands(false);
+                nextPhase(); // ベット額リセットのため一旦nextPhaseを実行
+                tutorialStep = 7; // 強制的に次のステップへジャンプ
+                break;
+            case 7: // ターン後の説明
+                displayDealerMessage('default', 0, '', 'ターンが開きました！あなたの手札と場札で <span class="highlight">ストレート</span> が完成しました！');
+                
+                // プレイヤーのベットを強制
+                playerActionPhase();
+                raiseAmountInput.value = 30; // レイズ額を固定
+                displayDealerMessage('default', 0, '', 'チャンスです！<span class="highlight">レイズ (30)</span> を選んでチップを増やしましょう！');
+                break; // プレイヤーのクリックを待つため、break
+            case 8:
+                // ディーラーがコールした後のショーダウンへ
+                displayDealerMessage('default', 0, '', 'ディーラーがあなたのレイズにコールしました。最後のカード、<span class="highlight">リバー</span> が開かれます。');
+                break;
+            case 9:
+                // リバーカード (ランダム)
+                communityCards.push(makeCard('♦', '2'));
+                renderHands(false);
+                nextPhase(); // ショーダウンへ
+                tutorialStep = 10;
+                break;
+            case 10:
+                // ショーダウン後の処理は通常フローに任せる
+                displayDealerMessage('default', 0, '', '全てのアクションが終了し、<span class="highlight">ショーダウン</span> です。<br>おめでとう！ストレートで勝利しました。');
+                postGameButtons.style.display = 'block';
+                document.getElementById('nextGameButton').textContent = 'チュートリアル終了';
+                document.getElementById('nextGameButton').onclick = () => {
+                    alert('チュートリアルを終了します。通常ゲームでチップを増やしましょう！');
+                    resetGame(true);
+                };
+                break;
+        }
+    }
+
+
+    // ----------------------------------------------------
     //  ゲームフロー関数
     // ----------------------------------------------------
     
-    function resetGame() {
+    function resetGame(shouldShowRuleModal = true) {
         deck = [];
         dealerHand = [];
         playerHand = [];
@@ -568,7 +654,11 @@
         currentBettingRound = 0;
         isGameOver = true;
         lastRaiser = null;
-        
+        isTutorial = false;
+        tutorialStep = 0;
+
+        chips = 1000; // チップをリセット
+
         renderHands(false);
         updateDisplay();
 
@@ -576,16 +666,22 @@
         playerHandStatusEl.textContent = '?';
         
         dealButton.style.display = 'block';
+        tutorialButton.style.display = 'inline-block'; // チュートリアルボタン再表示
         actionButtons.style.display = 'none';
         postGameButtons.style.display = 'none';
         ruleButton.style.display = 'inline-block';
-        displayDealerMessage('start');
+        
+        if (shouldShowRuleModal) {
+            ruleModal.style.display = 'flex'; // 初回のみルール表示
+        } else {
+            displayDealerMessage('start');
+        }
     }
 
     function startGame() {
         const ante = parseInt(anteAmountInput.value);
         if (chips < ante) {
-            displayDealerMessage('default', 0, 'チップが不足しています。アンティを減らしてください。');
+            displayDealerMessage('default', 0, '', 'チップが不足しています。アンティを減らしてください。');
             return;
         }
 
@@ -615,12 +711,9 @@
     
     // ベッティングラウンド終了判定
     function isBettingRoundOver() {
-        if (dealerBet === playerBet && (dealerBet > 0 || currentBettingRound > 0)) {
+        // 双方のベット額が等しい && 誰かがアクションを起こした (プリフロップ以外は誰かがベット)
+        if (dealerBet === playerBet && (dealerBet > 0 || currentBettingRound > 0 || (dealerBet === 0 && playerBet === 0))) {
             return true;
-        }
-        // プリフロップのみ、ディーラーがチェックでスタートして、プレイヤーがチェックした場合も終了
-        if (currentBettingRound === 0 && dealerBet === 0 && playerBet === 0) {
-             return true;
         }
         return false;
     }
@@ -628,13 +721,21 @@
     function dealerAction() {
         if (isGameOver) return;
         
-        // プレイヤーのベット額とディーラーのベット額が等しい場合は、ベッティングラウンド終了
+        // ベッティングラウンド終了判定
         if (isBettingRoundOver()) {
-             // アクションボタンを隠し、次のフェーズへ
              actionButtons.style.display = 'none';
              setTimeout(nextPhase, 1000); 
              return;
         }
+        
+        // チュートリアル中のディーラーアクションはスキップ（プレイヤーの操作を待つ）
+        if (isTutorial && tutorialStep === 5) {
+            // フロップ後のチェック誘導時のみディーラーアクションをスキップ
+            // プレイヤーアクションへ戻る
+            playerActionPhase(); 
+            return;
+        }
+
 
         // ディーラーのAIロジック（簡略化）
         const cardsToEvaluate = [...dealerHand, ...communityCards];
@@ -646,8 +747,14 @@
         
         const winProbability = dealerResult.rank / 10;
         
-        if (requiredCall > 0) {
-            // コールが必要な場合
+        // ----------------- チュートリアル専用アクション -----------------
+        if (isTutorial && tutorialStep === 7) {
+            // プレイヤーのレイズに対するコールを強制
+            action = 'call';
+        } 
+        // --------------------------------------------------------------
+        else if (requiredCall > 0) {
+            // コールが必要な場合 (通常AI)
             if (requiredCall > currentPot * 0.3) {
                 if (winProbability < 0.3) { action = 'fold'; } else { action = 'call'; }
             } else {
@@ -655,7 +762,7 @@
             }
         } 
         else {
-            // チェック/ベット可能な場合
+            // チェック/ベット可能な場合 (通常AI)
             if (winProbability > 0.6 || (dealerResult.rank >= 2 && Math.random() < 0.3)) { 
                 action = 'bet';
                 raiseAmount = Math.max(playerBet + 10, 20); 
@@ -673,11 +780,9 @@
             displayDealerMessage('dealer_call');
             lastRaiser = 'dealer';
             
-            // コールでアクションが一周 => 次のフェーズへ
             if (isBettingRoundOver()) {
                 setTimeout(nextPhase, 1000);
             } else {
-                 // 通常はコールで一周だが、念のためプレイヤーアクションへ戻す
                  playerActionPhase();
             }
             
@@ -685,19 +790,21 @@
             const betAmount = raiseAmount;
             const toBet = betAmount - dealerBet;
             
-            // ディーラーのチップは無限と仮定
             pot += toBet; 
             dealerBet = betAmount;
             displayDealerMessage('dealer_bet', betAmount);
             lastRaiser = 'dealer';
-            playerActionPhase(); // プレイヤーの番
+            playerActionPhase();
             
         } else if (action === 'check') {
             displayDealerMessage('dealer_check');
             lastRaiser = 'dealer';
             
-            // チェック後、プレイヤーの番へ (ベッティングラウンド終了判定はプレイヤー側で実施)
-            playerActionPhase();
+            if (isBettingRoundOver()) {
+                setTimeout(nextPhase, 1000);
+            } else {
+                playerActionPhase();
+            }
         }
         
         updateDisplay();
@@ -713,12 +820,14 @@
         
         foldButton.disabled = false;
         
+        // UIの明確化
         if (requiredCall > 0) {
+            // コールが必要な場合
             checkCallButton.textContent = `コール (${requiredCall})`;
             checkCallButton.disabled = chips < requiredCall;
             raiseButton.disabled = chips < requiredCall + 10;
         } else {
-            // チェックボタンがクリックできるようになる
+            // チェックが可能な場合
             checkCallButton.textContent = 'チェック';
             checkCallButton.disabled = false;
             raiseButton.disabled = chips < 10;
@@ -748,28 +857,36 @@
                 pot += requiredCall;
                 playerBet += requiredCall;
                 
-                displayDealerMessage('default', 0, 'あなたはコールしました。');
+                displayDealerMessage('default', 0, '', `あなたはコール (${requiredCall}) しました。`);
                 lastRaiser = 'player';
                 
-                // コールでアクションが一周したので次のフェーズへ
+                if (isTutorial) {
+                    // チュートリアル進行
+                    setTimeout(hideMessagePopup, 1000); // プレイヤーアクション後、次の説明へ
+                    return;
+                }
+                
                 if (isBettingRoundOver()) {
                     setTimeout(nextPhase, 1000);
                 } else {
-                    // ディーラーがアクションを続けている場合はディーラーの番へ戻る
                     dealerAction();
                 }
                 return;
 
             } else { // チェック
-                // ★修正箇所: チェック後の処理
-                displayDealerMessage('default', 0, 'あなたはチェックしました。');
+                // チェック後の処理
+                displayDealerMessage('default', 0, '', 'あなたはチェックしました。');
                 lastRaiser = 'player';
                 
+                if (isTutorial) {
+                    // チュートリアル進行
+                    setTimeout(hideMessagePopup, 1000); // プレイヤーアクション後、次の説明へ
+                    return;
+                }
+
                 if (isBettingRoundOver()) {
-                    // 双方チェックで一周したので次のフェーズへ
                     setTimeout(nextPhase, 1000);
                 } else {
-                    // ディーラーがアクションを続けている場合はディーラーの番へ戻る
                     dealerAction();
                 }
                 return;
@@ -786,9 +903,16 @@
             pot += toBet;
             playerBet = totalBet; 
             
-            displayDealerMessage('default', 0, `あなたは ${totalBet} にレイズしました。`);
+            displayDealerMessage('default', 0, '', `あなたは ${totalBet} にレイズしました。`);
             lastRaiser = 'player';
-            dealerAction(); // ディーラーの番へ
+
+            if (isTutorial) {
+                // チュートリアル進行
+                setTimeout(hideMessagePopup, 1000); // プレイヤーアクション後、次の説明へ
+                return;
+            }
+
+            dealerAction();
             return;
         }
 
@@ -810,25 +934,51 @@
         
         if (currentBettingRound === 1) {
             // フロップ (3枚)
-            communityCards.push(drawCard(), drawCard(), drawCard());
-            displayDealerMessage('flop');
+            if (!isTutorial) {
+                communityCards.push(drawCard(), drawCard(), drawCard());
+            } 
+            // チュートリアルの場合は、カードの設定とメッセージ表示は次のステップで実施
+            
+            renderHands(false); // ★場札を即時描画
+            updateDisplay();
+
+            if (isTutorial) {
+                handleTutorialStep(); // チュートリアルフロップ説明へ
+                return;
+            } else {
+                displayDealerMessage('flop');
+            }
         } else if (currentBettingRound === 2) {
             // ターン (4枚目)
-            communityCards.push(drawCard());
-            displayDealerMessage('turn');
+            if (!isTutorial) communityCards.push(drawCard());
+
+            renderHands(false); // ★場札を即時描画
+            updateDisplay();
+
+            if (isTutorial) {
+                handleTutorialStep(); // チュートリアルターン説明へ
+                return;
+            } else {
+                displayDealerMessage('turn');
+            }
         } else if (currentBettingRound === 3) {
             // リバー (5枚目)
-            communityCards.push(drawCard());
-            displayDealerMessage('river');
+            if (!isTutorial) communityCards.push(drawCard());
+
+            renderHands(false); // ★場札を即時描画
+            updateDisplay();
+
+            if (isTutorial) {
+                handleTutorialStep(); // チュートリアルリバー説明へ
+                return;
+            } else {
+                displayDealerMessage('river');
+            }
         } else if (currentBettingRound >= 4) {
             showdown();
             return;
         }
 
-        // ★修正箇所: カードを引いた直後に描画することで、場札の空白を解消
-        renderHands(false);
-        updateDisplay();
-        
         // 次のベッティングラウンド開始 (プレイヤーからアクション)
         playerActionPhase(); 
         checkCallButton.textContent = 'チェック';
@@ -868,7 +1018,12 @@
         updateDisplay();
         dealButton.style.display = 'none';
         actionButtons.style.display = 'none';
-        postGameButtons.style.display = 'block';
+        
+        if (!isTutorial) {
+             postGameButtons.style.display = 'block';
+        } else {
+             handleTutorialStep(); // チュートリアルの最終ステップへ
+        }
     }
 
     function endGame(reason, finalPot) {
@@ -894,12 +1049,15 @@
     //  イベントリスナー / 初期化
     // ----------------------------------------------------
     dealButton.addEventListener('click', startGame);
-    document.getElementById('nextGameButton').addEventListener('click', resetGame);
+    document.getElementById('nextGameButton').addEventListener('click', () => resetGame(false));
     
     // アクションボタン
     foldButton.addEventListener('click', () => handlePlayerAction('fold'));
     checkCallButton.addEventListener('click', () => handlePlayerAction('call_check'));
     raiseButton.addEventListener('click', () => handlePlayerAction('raise'));
+
+    // チュートリアルボタン
+    tutorialButton.addEventListener('click', startTutorial);
     
     // ルールモーダルの制御
     ruleButton.addEventListener('click', () => {
@@ -913,7 +1071,7 @@
 
     // 初回表示
     updateDisplay();
-    ruleModal.style.display = 'flex';
+    ruleModal.style.display = 'flex'; // 初回はモーダルを表示
     
 </script>
 </body>
