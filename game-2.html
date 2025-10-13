@@ -6,7 +6,7 @@
     <title>ポーカー（簡易版） - 心理戦カジノモード</title>
     <style>
         /* ======================== */
-        /* ゲーム画面のCSS - スクロール対策とコンパクト化 */
+        /* ゲーム画面のCSS */
         /* ======================== */
         body {
             font-family: 'Arial', sans-serif;
@@ -326,7 +326,7 @@
     let playerBet = 0;
     let currentBettingRound = 0; // 0: Pre-flop, 1: Flop, 2: Turn, 3: River
     let isGameOver = true;
-    let lastRaiser = null; // 最後にレイズした人 ('player' or 'dealer')
+    let lastRaiser = null; // 最後にレイズ/ベットした人 ('player' or 'dealer')
 
     // ----------------------------------------------------
     //  ユーティリティ関数
@@ -375,7 +375,7 @@
                 break;
             case 'dealer_call':
                 aa = '(-_-)';
-                message = `ディーラーはコール。あなたの番よ。`; // コール後のプレイヤーアクションを待つ
+                message = `ディーラーはコール。次のアクションに移るわ。`;
                 break;
             case 'dealer_raise':
                 aa = 'o(^-^)o';
@@ -613,9 +613,29 @@
         dealerAction();
     }
     
+    // ベッティングラウンド終了判定
+    function isBettingRoundOver() {
+        if (dealerBet === playerBet && (dealerBet > 0 || currentBettingRound > 0)) {
+            return true;
+        }
+        // プリフロップのみ、ディーラーがチェックでスタートして、プレイヤーがチェックした場合も終了
+        if (currentBettingRound === 0 && dealerBet === 0 && playerBet === 0) {
+             return true;
+        }
+        return false;
+    }
+
     function dealerAction() {
         if (isGameOver) return;
         
+        // プレイヤーのベット額とディーラーのベット額が等しい場合は、ベッティングラウンド終了
+        if (isBettingRoundOver()) {
+             // アクションボタンを隠し、次のフェーズへ
+             actionButtons.style.display = 'none';
+             setTimeout(nextPhase, 1000); 
+             return;
+        }
+
         // ディーラーのAIロジック（簡略化）
         const cardsToEvaluate = [...dealerHand, ...communityCards];
         const dealerResult = evaluateHand(cardsToEvaluate);
@@ -651,40 +671,33 @@
             pot += requiredCall;
             dealerBet += requiredCall;
             displayDealerMessage('dealer_call');
-            // コールでアクションが一周したので次のフェーズへ
-            lastRaiser = 'dealer'; // プレイヤーが最後にレイズしたと仮定し、一周したと見なす
-            setTimeout(nextPhase, 1000); 
+            lastRaiser = 'dealer';
+            
+            // コールでアクションが一周 => 次のフェーズへ
+            if (isBettingRoundOver()) {
+                setTimeout(nextPhase, 1000);
+            } else {
+                 // 通常はコールで一周だが、念のためプレイヤーアクションへ戻す
+                 playerActionPhase();
+            }
+            
         } else if (action === 'bet') {
             const betAmount = raiseAmount;
             const toBet = betAmount - dealerBet;
-            if (chips < toBet) { action = 'check'; } // チップが足りなければチェック
             
-            if (action === 'bet') {
-                // ディーラーのチップは無限と仮定し、ポットにチップを追加するだけ
-                pot += toBet; 
-                dealerBet = betAmount;
-                displayDealerMessage('dealer_bet', betAmount);
-                lastRaiser = 'dealer';
-                playerActionPhase(); // 再度プレイヤーの番
-            } else {
-                // チェック処理
-                displayDealerMessage('dealer_check');
-                if (lastRaiser === 'dealer') {
-                    setTimeout(nextPhase, 1000); // チェックで一周
-                } else {
-                    playerActionPhase(); // プレイヤーのチェックに合わせたので、プレイヤーの番
-                }
-            }
+            // ディーラーのチップは無限と仮定
+            pot += toBet; 
+            dealerBet = betAmount;
+            displayDealerMessage('dealer_bet', betAmount);
+            lastRaiser = 'dealer';
+            playerActionPhase(); // プレイヤーの番
+            
         } else if (action === 'check') {
             displayDealerMessage('dealer_check');
-            if (lastRaiser === 'player' || currentBettingRound === 0) {
-                // 誰も賭けていない or プレイヤーが最後にレイズ/ベットしていない場合
-                playerActionPhase(); // プレイヤーの番
-            } else {
-                // チェックでアクションが一周したので次のフェーズへ
-                lastRaiser = 'dealer'; // 念のため
-                setTimeout(nextPhase, 1000); 
-            }
+            lastRaiser = 'dealer';
+            
+            // チェック後、プレイヤーの番へ (ベッティングラウンド終了判定はプレイヤー側で実施)
+            playerActionPhase();
         }
         
         updateDisplay();
@@ -705,6 +718,7 @@
             checkCallButton.disabled = chips < requiredCall;
             raiseButton.disabled = chips < requiredCall + 10;
         } else {
+            // チェックボタンがクリックできるようになる
             checkCallButton.textContent = 'チェック';
             checkCallButton.disabled = false;
             raiseButton.disabled = chips < 10;
@@ -735,16 +749,29 @@
                 playerBet += requiredCall;
                 
                 displayDealerMessage('default', 0, 'あなたはコールしました。');
+                lastRaiser = 'player';
                 
                 // コールでアクションが一周したので次のフェーズへ
-                lastRaiser = 'player'; // プレイヤーが最後にアクション
-                setTimeout(nextPhase, 1000);
+                if (isBettingRoundOver()) {
+                    setTimeout(nextPhase, 1000);
+                } else {
+                    // ディーラーがアクションを続けている場合はディーラーの番へ戻る
+                    dealerAction();
+                }
                 return;
 
             } else { // チェック
+                // ★修正箇所: チェック後の処理
                 displayDealerMessage('default', 0, 'あなたはチェックしました。');
                 lastRaiser = 'player';
-                dealerAction(); // ディーラーの番へ
+                
+                if (isBettingRoundOver()) {
+                    // 双方チェックで一周したので次のフェーズへ
+                    setTimeout(nextPhase, 1000);
+                } else {
+                    // ディーラーがアクションを続けている場合はディーラーの番へ戻る
+                    dealerAction();
+                }
                 return;
             }
         }
@@ -782,7 +809,7 @@
         currentBettingRound++;
         
         if (currentBettingRound === 1) {
-            // フロップ (3枚) ★修正済み: カードを3枚引く
+            // フロップ (3枚)
             communityCards.push(drawCard(), drawCard(), drawCard());
             displayDealerMessage('flop');
         } else if (currentBettingRound === 2) {
@@ -796,12 +823,9 @@
         } else if (currentBettingRound >= 4) {
             showdown();
             return;
-        } else {
-             // 予期せぬラウンドは強制的に終了
-             showdown();
-             return;
         }
 
+        // ★修正箇所: カードを引いた直後に描画することで、場札の空白を解消
         renderHands(false);
         updateDisplay();
         
@@ -851,10 +875,8 @@
         isGameOver = true;
         
         if (reason === 'player_fold') {
-            // ポットはディーラーが獲得 (プレイヤーはコール/レイズ分を失う)
             displayDealerMessage('player_fold', finalPot);
         } else if (reason === 'dealer_fold') {
-            // ポットをプレイヤーが獲得
             chips += finalPot;
             displayDealerMessage('dealer_fold', finalPot);
         }
