@@ -112,14 +112,17 @@
         /* モーダルCSS (ルール) */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); /* 濃い背景 */
+            background-color: rgba(0, 0, 0, 0.85);
             display: flex; justify-content: center; align-items: center; z-index: 100;
         }
 
         .modal-content {
             background-color: #f5f5dc; 
             color: #333;
-            width: 90%; max-width: 600px;
+            width: 90%; 
+            max-width: 600px;
+            max-height: 90vh; /* 画面の高さに収まるように制限 */
+            overflow-y: auto; /* コンテンツが多すぎる場合はスクロール可能にする */
             padding: 30px 20px 15px 20px;
             border-radius: 10px;
             position: relative;
@@ -129,7 +132,19 @@
             background-size: 20px 20px; 
             text-shadow: 1px 1px 0 rgba(255,255,255,0.3); 
         }
-        .close-button { position: absolute; top: 5px; right: 15px; background: none; border: none; color: #333; font-size: 2em; cursor: pointer; z-index: 101; }
+        .close-button { 
+            position: absolute; 
+            top: 5px; 
+            right: 15px; 
+            background: none; 
+            border: none; 
+            color: #333; 
+            font-size: 2em; 
+            cursor: pointer; 
+            z-index: 101; 
+            padding: 5px; /* クリックしやすいようにパディング追加 */
+            line-height: 1;
+        }
         .rule-title { color: #8b0000; border-bottom: 2px solid #ccac00; padding-bottom: 5px; margin-bottom: 15px; }
         .rule-list { text-align: left; list-style-type: disc; margin-left: 20px; font-size: 0.95em; }
         .rule-list li { margin-bottom: 8px; }
@@ -300,7 +315,7 @@
     function getDealerMessage(type, amount = 0, handName = '') {
         let aa = '';
         let message = '';
-        const potMsg = `ポット ${pot}`;
+        const potMsg = `ポット ${pot + dealerBet + playerBet}`;
 
         switch (type) {
             case 'start':
@@ -341,7 +356,7 @@
                 break;
             case 'player_win':
                 aa = '(^O^)/';
-                message = `🎉 **${handName}** で勝利！ポット ${pot} を獲得！`;
+                message = `🎉 **${handName}** で勝利！ポット ${pot + dealerBet + playerBet} を獲得！`;
                 break;
             case 'dealer_win':
                 aa = '(-_メ)';
