@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ポーカー（簡易版） - 最適化版</title>
+    <title>ポーカー（簡易版） - 最終調整版</title>
     <style>
         /* ... (CSSは変更なし) ... */
         body {
@@ -579,7 +579,7 @@
             return;
         }
 
-        // 通常ゲームのディーラーAIロジック（簡略化）
+        // 通常ゲームのディーラーAIロジック（修正）
         const cardsToEvaluate = [...dealerHand, ...communityCards];
         const dealerResult = evaluateHand(cardsToEvaluate);
         const requiredCall = playerBet - dealerBet;
@@ -587,17 +587,39 @@
         let action = 'check';
         let raiseAmount = 0;
         
+        // 役のランクに基づいて、0 (ハイカード) から 9 (ロイヤルSF) の間で勝率を概算
         const winProbability = dealerResult.rank / 10;
         
         if (requiredCall > 0) {
-            if (requiredCall > currentPot * 0.3) {
-                action = (winProbability < 0.3) ? 'fold' : 'call';
+            // **【修正点: コール/フォールドの調整】**
+            // requiredCallがポットに対する比率 (Pot Odds) を計算
+            const potOdds = requiredCall / (currentPot + requiredCall);
+            
+            // 役のランクに基づいた勝負強さの閾値
+            let callThreshold = 0.2 + (currentBettingRound * 0.1); // ラウンドが進むほどコールしやすく
+
+            if (winProbability >= callThreshold) {
+                // 勝率が閾値以上ならコール
+                action = 'call';
+            } else if (winProbability + 0.1 > potOdds && Math.random() < 0.4) {
+                 // 勝率が低くても、オッズが合っている場合やブラフ気味にコール (40%の確率で)
+                 action = 'call';
+            } else if (requiredCall < 50 && Math.random() < 0.2) {
+                 // 小額のベットなら20%の確率でコール（ブラフ対応）
+                 action = 'call';
             } else {
-                action = (winProbability < 0.2) ? 'fold' : 'call';
+                 action = 'fold'; // どうしてもオッズと役が悪い場合にフォールド
             }
-        } else if (winProbability > 0.6 || (dealerResult.rank >= 2 && Math.random() < 0.3)) { 
-            action = 'bet';
-            raiseAmount = Math.max(playerBet + 10, 20); 
+        } 
+        else {
+            // チェック/ベット可能な場合 (攻撃性の調整)
+            if (winProbability > 0.6 || (dealerResult.rank >= 2 && Math.random() < 0.4)) { 
+                action = 'bet';
+                // ポットの2/3をレイズ額の基準に
+                raiseAmount = Math.max(Math.floor(currentPot * 0.66), playerBet + 10, 20); 
+            } else {
+                action = 'check';
+            }
         }
 
         executeDealerAction(action, requiredCall, raiseAmount);
