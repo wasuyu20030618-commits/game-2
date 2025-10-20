@@ -326,7 +326,7 @@
     const nextGameButton = document.getElementById('nextGameButton');
     
     // ゲーム変数
-    let chips = 1000;
+    let chips = 1000; // 初期チップ
     let pot = 0;
     let deck = [];
     let dealerHand = []; // 2枚
@@ -444,15 +444,17 @@
     }
 
     function renderHands(showDealer = false) {
+        // ディーラーの手札は常に2枚
         dealerCardsEl.innerHTML = dealerHand.map(card => 
             getCardHtml(card, !showDealer)
         ).join('');
         
+        // プレイヤーの手札も常に2枚
         playerCardsEl.innerHTML = playerHand.map(card => 
             getCardHtml(card)
         ).join('');
         
-        // 場札のレンダリング
+        // 場札（コミュニティカード）のレンダリング
         communityCardsEl.innerHTML = communityCards.map(card => 
             getCardHtml(card)
         ).join('');
@@ -546,7 +548,7 @@
         isTutorial = true;
         tutorialStep = 0;
         
-        chips = 200; // チュートリアル用のチップ
+        chips = 200; // チュートリアル用のチップは固定
         
         // UIの初期化
         dealButton.style.display = 'none';
@@ -597,8 +599,8 @@
                 displayDealerMessage('default', 0, '', 'コールが完了しました。次に <span class="highlight">フロップ</span> として場札が3枚開かれます。');
                 break;
             case 5: // フロップ後の説明
-                // 固定のフロップカードを設定 (K♣ J♠ A♦) -> ストレートドロー (Q, T)
-                communityCards = [makeCard('♣', 'T'), makeCard('♠', 'J'), makeCard('♦', 'A')]; // T J A -> Qでストレート
+                // 固定のフロップカードを設定 (T♣ J♠ A♦)
+                communityCards = [makeCard('♣', 'T'), makeCard('♠', 'J'), makeCard('♦', 'A')]; 
                 renderHands(false);
                 displayDealerMessage('default', 0, '', 'フロップが開きました！あなたの手札 (Q, K) と場札 (T, J, A) を合わせると、<span class="highlight">Qか9があればストレートが完成</span>します。');
                 
@@ -615,10 +617,10 @@
                 displayDealerMessage('default', 0, '', 'ディーラーもチェックしました。4枚目のカード、<span class="highlight">ターン</span> が開かれます。');
                 break;
             case 7: // ターン後の説明 (修正点)
-                // ターンカード (T♥) -> ストレート完成！
+                // ターンカード (Q♥) -> ストレート完成！
                 communityCards.push(makeCard('♥', 'Q'));
                 renderHands(false);
-                displayDealerMessage('default', 0, '', 'ターンが開きました！<span class="highlight">ストレートが完成</span>しました！手札のQと場札のT, J, Q, Aで最強クラスの役です。');
+                displayDealerMessage('default', 0, '', 'ターンが開きました！あなたの手札と場札で <span class="highlight">ストレートが完成</span>しました！手札のQと場札のT, J, Q, Aで最強クラスの役です。');
                 
                 // ベット額リセット
                 pot += dealerBet + playerBet; 
@@ -648,7 +650,9 @@
                 nextGameButton.textContent = '通常ゲームへ'; // ボタンテキスト修正
                 nextGameButton.onclick = () => {
                     alert('チュートリアルを終了し、通常ゲームへ移行します。頑張ってチップを増やしましょう！');
-                    resetGame(false); // モーダルなしで通常ゲーム（ゲーム開始画面）へ
+                    // チュートリアル終了時のみ、初期チップ(1000)に戻して通常ゲーム開始画面へ
+                    chips = 1000; 
+                    resetGame(false); 
                 };
                 break;
         }
@@ -659,6 +663,8 @@
     //  ゲームフロー関数
     // ----------------------------------------------------
     
+    let initialChips = 1000; // 初回起動時のチップ
+
     function resetGame(shouldShowRuleModal = true) {
         deck = [];
         dealerHand = [];
@@ -673,7 +679,14 @@
         isTutorial = false;
         tutorialStep = 0;
 
-        chips = 1000; // チップをリセット
+        // **【重要修正】** チュートリアル終了時以外はチップをリセットしない
+        if (shouldShowRuleModal) { 
+            chips = initialChips; 
+        } else if (chips <= 0) {
+             // チップがなくなったらゲームオーバーとしてリセット
+             alert("チップが尽きました。ゲームオーバーです。初期チップで再開します。");
+             chips = initialChips; 
+        }
 
         renderHands(false);
         updateDisplay();
@@ -682,17 +695,18 @@
         playerHandStatusEl.textContent = '?';
         
         dealButton.style.display = 'block';
-        tutorialButton.style.display = 'inline-block'; // チュートリアルボタン再表示
+        tutorialButton.style.display = 'inline-block'; 
         actionButtons.style.display = 'none';
         postGameButtons.style.display = 'none';
         ruleButton.style.display = 'inline-block';
         
         // 次のゲームボタンの動作をデフォルトに戻す
         nextGameButton.textContent = '次の勝負へ'; 
+        // **【重要修正】** resetGame(false)で、次のゲーム（チップ維持）を開始
         nextGameButton.onclick = () => resetGame(false); 
         
         if (shouldShowRuleModal) {
-            ruleModal.style.display = 'flex'; // 初回はルール表示
+            ruleModal.style.display = 'flex'; 
         } else {
             displayDealerMessage('start');
         }
@@ -701,7 +715,7 @@
     function startGame() {
         const ante = parseInt(anteAmountInput.value);
         if (chips < ante) {
-            displayDealerMessage('default', 0, '', 'チップが不足しています。アンティを減らしてください。');
+            displayDealerMessage('default', 0, '', 'チップが不足しています。アンティを減らすか、次のゲームへ進んでください。');
             return;
         }
 
@@ -714,6 +728,7 @@
         playerBet = ante;
         dealerBet = ante; 
         
+        // **【重要確認】** 手札2枚を配る
         playerHand.push(drawCard(), drawCard());
         dealerHand.push(drawCard(), drawCard());
 
@@ -750,7 +765,7 @@
         
         // チュートリアル中のディーラーアクションはスキップ（プレイヤーの操作を待つ）
         if (isTutorial && (tutorialStep === 5 || tutorialStep === 7)) {
-            // フロップ後のチェック誘導時 (Step 5) と、レイズ後のコール誘導時 (Step 7) のみディーラーAIロジックをバイパス
+            // ... チュートリアルロジックは変更なし
             if (tutorialStep === 5) {
                 // チェックを強制
                 displayDealerMessage('dealer_check');
@@ -849,7 +864,7 @@
         
         foldButton.disabled = false;
         
-        // UIの明確化ロジック強化
+        // **【重要確認】** コールボタンのテキスト
         if (requiredCall > 0) {
             // コールが必要な場合
             checkCallButton.textContent = `コール (${requiredCall})`;
@@ -959,7 +974,7 @@
         currentBettingRound++;
         
         if (currentBettingRound === 1) {
-            // フロップ (3枚)
+            // フロップ (3枚) - **【重要確認】**
             if (!isTutorial) {
                 communityCards.push(drawCard(), drawCard(), drawCard());
                 displayDealerMessage('flop');
@@ -972,7 +987,7 @@
                 return;
             }
         } else if (currentBettingRound === 2) {
-            // ターン (4枚目)
+            // ターン (4枚目) - **【重要確認】**
             if (!isTutorial) communityCards.push(drawCard());
             
             renderHands(false); 
@@ -985,7 +1000,7 @@
                 displayDealerMessage('turn');
             }
         } else if (currentBettingRound === 3) {
-            // リバー (5枚目)
+            // リバー (5枚目) - **【重要確認】**
             if (!isTutorial) communityCards.push(drawCard());
             
             renderHands(false); 
@@ -1071,7 +1086,7 @@
     //  イベントリスナー / 初期化
     // ----------------------------------------------------
     dealButton.addEventListener('click', startGame);
-    document.getElementById('nextGameButton').addEventListener('click', () => resetGame(false));
+    // nextGameButtonの動作はresetGame(false)に設定されている（チップ維持で次のゲームへ）
     
     // アクションボタン
     foldButton.addEventListener('click', () => handlePlayerAction('fold'));
